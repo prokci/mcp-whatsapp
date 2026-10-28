@@ -1,0 +1,13 @@
+services:
+  db_postgres:
+    image: pgvector/pgvector:pg17
+    container_name: ise_trade_automatization
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:        ${PG_DATABASE}
+      POSTGRES_USER:      ${PG_USERNAME}
+      POSTGRES_PASSWORD:  ${PG_PASSWORD}
+    ports:
+      - ${PG_PORT}:5432
+    volumes:
+      - ./.data/data_base:/var/lib/postgresql/data
