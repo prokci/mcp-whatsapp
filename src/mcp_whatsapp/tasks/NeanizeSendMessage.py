@@ -1,6 +1,7 @@
+from neonize.utils import build_jid
+
 from src.mcp_whatsapp.tasks.Task import WhatsappTask
 from src.mcp_whatsapp.web_app.NeonizeContext import NeonizeContext
-from neonize.utils import build_jid
 
 # class SendMessage(Task):
 #     def __init__(self, message: str, supplier: Supplier):

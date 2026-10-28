@@ -1,5 +1,7 @@
 import abc
+
 from src.mcp_whatsapp.web_app.AppPolicy import AppPolicy
+
 
 class Task(abc.ABC):
     description: str
