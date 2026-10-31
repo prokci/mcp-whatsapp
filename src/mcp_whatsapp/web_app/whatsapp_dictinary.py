@@ -8,6 +8,8 @@ lang_dict = {
     "placeholder_search": ["Поиск или новый чат","Search or start a new chat"],
     "attach": ["Прикрепить","Attach"],
     "document": ["Документ","Document"],
+    "close" : ["Закрыть","Close"],
+    "discard" : ["Сбросить","Discard"],
 }
 
 class Language(Singleton):

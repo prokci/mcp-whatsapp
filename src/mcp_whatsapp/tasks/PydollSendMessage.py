@@ -28,9 +28,11 @@ class PydollWalkToChat(WhatsappTask):
             raise_exc=False
         )
         if not search_box:
-            search_box = await tab.query(
-                '/html/body/div[1]/div/div/div/div/div[3]/div/div[3]/div/div[1]/div[1]/div/div/div/div/div/div[2]/input'
-            )
+            inputs = raise_none(await tab.find(tag_name="input", raise_exc=False, find_all=True))
+            inputs = [input for input in inputs if await input.is_visible() and input.attributes.get('data_testid') not in ["conversation-compose-box-input", "media-caption-input-container"]]
+            if len(inputs) != 1:
+                raise RuntimeError("Can't find search box")
+            search_box = raise_none(inputs[0])
         
         await search_box.click(humanize=is_humanize)
         
@@ -54,7 +56,7 @@ class PydollWalkToChat(WhatsappTask):
             tag_name="div",
             role="button",
             tabindex="0",
-            aria_label="Close",
+            aria_label=self.lang["close"],
             timeout=policy.element_timeout,
             raise_exc=False
         )
@@ -62,7 +64,7 @@ class PydollWalkToChat(WhatsappTask):
             await close_button.click(humanize=is_humanize)
             
             discard_button = await tab.query(
-                '//button[.//span[text()="Discard"]]', 
+                f'//button[.//span[text()="{self.lang["discard"]}"]]', 
             )
             
             await policy.delay_between_actions()
@@ -138,8 +140,7 @@ class PydollSendFile(WhatsappTask):
             
         if not need_user_confirmation:
             await policy.delay_between_steps()
-            send_btn = await tab.find(data_testid="wds-ic-send-filled", timeout=policy.element_timeout)
-            await send_btn.click(humanize=is_humanize)
+            await tab.keyboard.press(Key.ENTER)
             
     async def send_messge_if_need(self, policy: AppPolicy):
         is_humanize = policy.humanize
@@ -147,10 +148,10 @@ class PydollSendFile(WhatsappTask):
         
         message_input = await tab.find(data_testid="media-caption-input-container", timeout=policy.element_timeout)
         await message_input.click(humanize=is_humanize)
-        await policy.delay_between_actions()
+        await policy.delay_between_steps()
         
         await tab.keyboard.hotkey(Key.CONTROL, Key.A)
-        await policy.delay_between_actions()
+        await policy.delay_between_steps()
         await tab.keyboard.press(Key.BACKSPACE)
         
         if self.message:

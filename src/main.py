@@ -106,18 +106,17 @@ mcp_sse = SseServerTransport("/messages")
 async def app_lifespan(app: FastAPI):
     context = WhatsAppPydollContext()
     queue = WebAppQueue()
-    await db_context.launch()
-    await context.lanch()
-    queue.start()
-                        
-    await neonize_context.lanch()
-
-    yield
-    
-    broadcaster.close_all()
-    await neonize_context.cancel()
-    await queue.cancel()
-    await context.close()
+    try:
+        await db_context.launch()
+        await context.lanch()
+        queue.start()    
+        await neonize_context.lanch()
+        yield
+    finally:
+        broadcaster.close_all()
+        await neonize_context.cancel()
+        await queue.cancel()
+        await context.close()
     
 #FASTAPI
 app = FastAPI(lifespan=app_lifespan)
