@@ -18,9 +18,8 @@ SQLModel = declarative_base()
 
 
 class DBContext(Singleton):
-    load_dotenv()
-    DATABASE_URL = raise_none(os.getenv("DATABASE_URL"))
-    GO_DATABASE_URL = raise_none(os.getenv("GO_DATABASE_URL"))
+    DATABASE_URL = f"postgresql+asyncpg://{os.getenv('PG_USERNAME')}:{os.getenv('PG_PASSWORD')}@{os.getenv('PG_HOST')}:{os.getenv('PG_PORT')}/postgres"
+    GO_DATABASE_URL = f"postgres://{os.getenv('PG_USERNAME')}:{os.getenv('PG_PASSWORD')}@{os.getenv('PG_HOST')}:{os.getenv('PG_PORT')}/postgres?sslmode=disable"
     timezone = ZoneInfo("Europe/Minsk")
     
     engine:AsyncEngine

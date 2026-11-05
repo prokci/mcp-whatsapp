@@ -1,66 +1,20 @@
 
-import io
 import json
 import operator
-import random
-import re
+import os
 from collections import deque
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from collections.abc import Set as AbstractSet
 from dataclasses import asdict, is_dataclass
 from datetime import date, datetime, time
 from enum import Enum
-from functools import reduce, wraps
+from functools import reduce
 from inspect import isfunction
 from itertools import groupby, zip_longest
 from pathlib import Path
-from time import sleep
 from typing import Any, TypeVar
-from urllib.parse import unquote, urlparse
 from uuid import UUID
-from zoneinfo import ZoneInfo
 
-import fitz
-import numpy as np
-import requests as req
-import torch
-from inputimeout import TimeoutOccurred, inputimeout
-from PIL import Image
-from pydoll.browser.tab import Tab
-from pydoll.commands.page_commands import PageCommands
-from tqdm.auto import tqdm
-
-
-def safe_list_get(l: list, idx: int, default = None):
-    """
-    Safely retrieves an element from a list or numpy array at the specified index.
-
-    Args:
-        l (list or numpy.ndarray): The list or numpy array from which to retrieve the element.
-        idx (int): The index of the element to retrieve.
-        default (optional): The default value to return if the list or numpy array is None or the index is out of range. Defaults to None.
-
-    Returns:
-        The element at the specified index if the list or numpy array is not None and the index is within range. Otherwise, returns the default value.
-    """
-    if l is None or not isinstance(l, (list, np.ndarray)) or len(l)<=idx:
-        return default
-    else:
-        return l[idx]
-
-def is_obj(obj):
-    """
-    Check if the given object is not a primitive data type.
-
-    Parameters:
-        obj (any): The object to be checked.
-
-    Returns:
-        bool: True if the object is not a primitive data type, False otherwise.
-    """
-    return not is_primitive(obj)
-    
-    
 T = TypeVar('T')
 def first(the_iterable:Iterable[T], condition = lambda x: True)->T|None:
     """
@@ -79,42 +33,6 @@ def first(the_iterable:Iterable[T], condition = lambda x: True)->T|None:
         
 
 
-def is_primitive(var):
-    """
-    Check if the given variable is a primitive data type.
-
-    Parameters:
-        var (any): The variable to check.
-
-    Returns:
-        bool: True if the variable is a primitive data type, False otherwise.
-    """
-    primitive = (int, float, str, bool, type(None), np.number)
-    return isinstance(var, primitive)
-    
-def empty_list_or_dict(var):
-        """
-        Returns an empty list if the input variable is a list or a numpy array, otherwise returns an empty dictionary.
-
-        Parameters:
-            var (any): The input variable to check.
-
-        Returns:
-            list or dict: An empty list if the input variable is a list or a numpy array, otherwise an empty dictionary.
-        """
-        return [] if isinstance(var, (list, np.ndarray)) else {}
-    
-def is_etarable_contaner(objects: Any):
-        """
-        Check if the given object is an iterable container.
-
-        Parameters:
-            objects (any): The object to be checked.
-
-        Returns:
-            bool: True if the object is a list or a numpy array, False otherwise.
-        """
-        return isinstance(objects, (list, np.ndarray))
 
 def switch_or_find_and_call_func(data:Any, switch_dict:dict[str, Callable[[Any], Any]], current_name):
         """
@@ -159,18 +77,7 @@ def json_default(obj):
     """
     if isinstance(obj, set):
         listObj = list(obj)
-        def is_not_object(x):
-            if is_primitive(x) and not isinstance(x, np.number):
-                return x
-            elif isinstance(x, np.number):
-                return float(x)
-        
-        listprimitive = map(is_not_object, listObj)
-        return sorted(listprimitive, key=lambda x:x if not x is None else 0)
-    elif isinstance(obj, (np.ndarray, torch.Tensor)):
-        return obj.tolist()
-    elif isinstance(obj, np.number):
-        return obj.item()
+        return sorted(listObj, key=lambda x:x if not x is None else 0)
     elif isfunction(obj):
         return obj.__name__+'(...)'
     return obj
@@ -188,7 +95,7 @@ def unzip(zipped_list):
   return zip_longest(*zipped_list)
 
 def if_can_to_int(val):
-    if isinstance(val, (np.number, float)) and not np.isnan(val):
+    if isinstance(val, (float)):
         if round(val) == val: # type: ignore
             return int(val)
     else:
@@ -231,12 +138,6 @@ def sort_dict(index:dict, axis: int):
     lst = list(index.items())
     lst.sort(key=lambda x: x[axis])
     return {k:v for k,v in lst}
-
-def get_len(obj):
-    if isinstance(obj, (list, np.ndarray, tuple, Sequence)):
-        return len(obj)
-    else:
-        return 1
     
 def search(arr, element):
     for i, arr_item in enumerate(arr):
@@ -248,12 +149,6 @@ def search(arr, element):
 def to_value(element):
     if isinstance(element, Sequence) and len(element) == 1 and not isinstance(element, str):
         return to_value(element[0])
-    elif isinstance(element, np.ndarray) and np.prod(np.array(element.shape)) == 1:  # noqa: SIM114
-        return to_value(element.item())
-    elif isinstance(element, np.generic):  # noqa: SIM114
-        return to_value(element.item())
-    elif isinstance(element, torch.Tensor) and element.numel() == 1:
-        return to_value(element.item())
     elif isinstance(element, set):
         return to_value(list(element))
     elif isinstance(element, (int, float, complex)):
@@ -323,238 +218,8 @@ def get_min_len_key(dict_:dict):
     return min_key
 
 
-def get_seed(rng: np.random.Generator):
-    return rng.integers(0, np.iinfo(np.int32).max)
-
 def exclude(m, exclude):
     return list(set(m) - set(exclude))
-
-
-class ProgressiveTryError(Exception):
-    pass
-
-
-def progresive_try(func, n_tries, max_s = 60, base = 4, final_raise = True, error_type = Exception):
-    for i in range(n_tries):
-        try:
-            return func()
-        except error_type as e:
-            s = abs(min(base**(i+1), max_s) + random.normalvariate(0, base))
-            tqdm.write(f"[progresive_try] Error: {e}. Retrying...({s}s)")
-            sleep(s)
-    
-    if final_raise:
-        raise ProgressiveTryError(f"[progresive_try] Failed {n_tries} times.")
-        
-def fac_progresive_try(n_tries, max_s = 100, base = 4, final_raise = True):
-    def dec_progresive_try(func):
-        @wraps(func)
-        def _progresive_try_wrap():
-            return progresive_try(func, n_tries, max_s, base, final_raise)
-        return _progresive_try_wrap
-    return dec_progresive_try
-
-        
-def fac_progresive_try_with_params(n_tries, max_s = 100, base = 4, final_raise = True):
-    def dec_progresive_try(func):
-        @wraps(func)
-        def _progresive_try_wrap(*args, **kwards):
-            def func_wrap():
-                return func(*args, **kwards)
-            return progresive_try(func_wrap, n_tries, max_s, base, final_raise)
-        return _progresive_try_wrap
-    return dec_progresive_try
-
-
-T = TypeVar('T')
-
-
-class PassError(Exception):
-    pass
-
-class InteractiveRetryHandler:
-    def __init__(self, n_tries: int = 5, timeout_retry: int = 30*60, ping_func: Callable[[], bool]|None = None):
-        self.n_tries = n_tries
-        self.timeout_retry = timeout_retry
-        self.ping_func = ping_func
-        
-    def set_ping_func(self, ping_func: Callable[[], bool]|None):
-        self.ping_func = ping_func
-        
-    def __call__(self,func: Callable[[], T], n_tries: int|None = None, timeout_retry: int|None = None, ping_func: Callable[[], bool]|None = None) -> T:
-        """
-        Attempts to execute a function up to n_tries times, asking the user
-        whether to retry or quit upon each failure.
-
-        Args:
-            func (Callable[[], T]): The function to execute. It must take no arguments.
-            n_tries (int): The maximum number of attempts allowed.
-
-        Returns:
-            T: The result of the function if it succeeds.
-
-        Raises:
-            Exception: Re-raises the last exception if all retries fail or if the user chooses to quit.
-        """
-        if n_tries is None:
-            n_tries = self.n_tries
-        if timeout_retry is None:
-            timeout_retry = self.timeout_retry
-        if ping_func is None:
-            ping_func = self.ping_func
-        
-        last_exeption = None
-        for attempt in range(1, n_tries + 1):
-            try:
-                return func() 
-            
-            except Exception as e:
-                tqdm.write(f"\nAn error occurred: {e}")
-                last_exeption = e
-                
-                if ping_func is not None and ping_func():
-                    tqdm.write("Request corrupted. Queting...")
-                    raise PassError("Request corrupted.")
-
-                if attempt == n_tries:
-                    tqdm.write("This was the final attempt. The operation has failed.")
-                    raise
-                
-                while True:
-                    user_input = None
-                    try:
-                        user_input = inputimeout(prompt=f"Do you want to (r)etry or (p)ass? (autoretry in {timeout_retry}s)", timeout=timeout_retry)
-                        print(f"You said: {user_input}")
-                    except TimeoutOccurred:
-                        user_input = 'r'
-                        break
-                    
-                    if user_input in ('r', 'retry'):
-                        break 
-                    elif user_input in ('p', 'pass'):
-                        error_str="Passing as requested by user."
-                        tqdm.write(error_str)
-                        raise PassError(error_str)
-                    else:
-                        tqdm.write("Invalid input. Please enter 'r' or 'p'.")
-        
-        raise raise_none(last_exeption)
-                            
-interactive_retry = InteractiveRetryHandler()
-
-class RetryHandler:
-    def __init__(self, n_tries: int = 5, callbacks: list|None = None):
-        self.n_tries = n_tries
-        self.callbacks = callbacks if callbacks is not None else []
-        
-    def adds_callbacks(self, callbacks):
-        self.callbacks.extend(callbacks)
-        
-    def clear_callbacks(self):
-        self.callbacks = []
-        
-    def __call__(self, func: Callable[[], T], n_tries: int|None = None):
-        if n_tries is None:
-            n_tries = self.n_tries
-            
-        def prog_inc_func():
-            try:
-                return func
-            except Exception as e:
-                tqdm.write(f"\nAn error occurred: {e}")
-                for callback in self.callbacks:
-                    callback.on_llm_error(e)
-                raise
-        return interactive_retry(raise_none(progresive_try(prog_inc_func, n_tries)), n_tries)
-
-retry = RetryHandler()
-    
-    
-
-
-
-def optimize_image(pix: fitz.Pixmap, max_size=(1024, 1024), quality=70, format="JPEG") -> io.BytesIO:
-    """
-    Compresses and resizes the image for the LLM to save bandwidth and tokens.
-    Returns the optimized image as a base64 string.
-    """
-    # 1. Load the PyMuPDF Pixmap into a Pillow Image
-    img:Image.Image = Image.open(io.BytesIO(pix.tobytes("png")))
-    if img.mode in ("RGBA", "P"):
-        img = img.convert("RGB")
-    img.thumbnail(max_size, Image.Resampling.LANCZOS)
-    buffer = io.BytesIO()
-    img.save(buffer, format=format, optimize=True, quality=quality)
-    return buffer
-
-def get_unified_timeout():
-    return random.uniform(1, 3) + random.betavariate(50, 50)*6
-
-
- 
-async def set_timezone_auto(tab:Tab, timezone_id: str):
-    """
-    Override timezone via JavaScript, automatically calculating 
-    the correct summer/winter offset for the current date.
-
-    Args:
-        tab: The PyDoll browser tab
-        timezone_id: IANA timezone name
-    """
-    target_tz = ZoneInfo(timezone_id)
-    now_in_target_tz = datetime.now(target_tz)
-    
-    offset_minutes = int(raise_none(now_in_target_tz.utcoffset()).total_seconds() / 60)
-    
-    js_offset = -offset_minutes
-    script = f'''
-        const _origDTF = Intl.DateTimeFormat;
-        Intl.DateTimeFormat = function(...args) {{
-            const opts = args[1] || {{}};
-            opts.timeZone = '{timezone_id}';
-            return new _origDTF(args[0], opts);
-        }};
-        Object.defineProperty(Intl.DateTimeFormat, 'prototype', {{
-            value: _origDTF.prototype
-        }});
-        Date.prototype.getTimezoneOffset = function() {{ return {js_offset}; }};
-    '''
-    
-    command = PageCommands.add_script_to_evaluate_on_new_document(source=script)
-    await tab._connection_handler.execute_command(command)
-
-
-def get_robust_filename(response: req.Response, fallback_html_text: str = "") -> str:
-    """
-    Extracts the true filename from the HTTP response exactly like a browser does.
-    """
-    
-    if "Content-Disposition" in response.headers:
-        content_disposition = response.headers["Content-Disposition"]
-        
-        # RFC 5987 formatted names (e.g., filename*=UTF-8''Zadanie.pdf)
-        match_utf8 = re.search(r"filename\*=UTF-8''([^;]+)", content_disposition, re.IGNORECASE)
-        if match_utf8:
-            return unquote(match_utf8.group(1)).strip()
-        
-        # standard formatted names (e.g., filename="Zadanie.pdf")
-        match = re.search(r'filename=["\']?([^;"\']+)["\']?', content_disposition, re.IGNORECASE)
-        if match:
-            return match.group(1).strip()
-
-    url_path = urlparse(response.url).path
-    name_from_url = url_path.split('/')[-1]
-    if name_from_url and '.' in name_from_url:
-        return unquote(name_from_url).strip()
-    
-    fallback_html_text = fallback_html_text.strip()
-    if fallback_html_text and '.' in fallback_html_text:
-        return fallback_html_text
-        
-    raise ValueError(
-        f"Cannot determine a filename for URL: {response.url}\n"
-        f"Headers: {response.headers.get('Content-Disposition')}"
-    )
 
 def to_jsonable(obj):
     """
@@ -572,18 +237,6 @@ def to_jsonable(obj):
 
     if isinstance(obj, float):
         return obj
-
-    
-    if isinstance(obj, np.ndarray):
-        return to_jsonable(obj.tolist())
-    if isinstance(obj, np.integer):
-        return int(obj)
-    if isinstance(obj, np.floating):
-        return float(obj)
-    if isinstance(obj, np.bool_):
-        return bool(obj)
-    if isinstance(obj, np.complexfloating):
-        return {"real": float(obj.real), "imag": float(obj.imag)}
 
     if isinstance(obj, (set, frozenset, AbstractSet)):
         converted_items = [to_jsonable(item) for item in obj]
@@ -624,3 +277,7 @@ def to_jsonable(obj):
         return to_jsonable(vars(obj))#2
 
     return str(obj)
+
+
+def is_in_container():
+    return os.path.exists('/.dockerenv')

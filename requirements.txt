@@ -1,0 +1,11 @@
+sqlalchemy[asyncio]
+dotenv
+fastapi
+mcp
+neonize
+pyperclip
+pydoll-python
+mcp<2
+tzdata
+asyncpg
+psutil

@@ -8,13 +8,14 @@ from zoneinfo import ZoneInfo
 
 import psutil
 import pydoll
+import pydoll.exceptions as exc
 from pydoll.browser import Chrome
 from pydoll.browser.options import ChromiumOptions
 from pydoll.browser.tab import Tab
 from pydoll.decorators import retry
 
 from src.mcp_whatsapp.utils.Context import Context
-from src.mcp_whatsapp.utils.funcs import raise_none
+from src.mcp_whatsapp.utils.funcs import is_in_container, raise_none
 from src.mcp_whatsapp.web_app.WebAppQueue import WebAppQueue
 from src.mcp_whatsapp.web_app.whatsapp_dictinary import Language
 
@@ -51,7 +52,7 @@ class WhatsAppPydollContext(Context):
                 res = await self.tab.find(text=self.lang["load_whatsapp_key_word"], raise_exc = False, timeout=5)
                 if res:
                     break
-            log.debug("WhatsApp Web readyState is complete.")
+            log.info("WhatsApp Web readyState is complete.")
             
             self._watchdog_task = asyncio.create_task(self._watchdog_loop())
             
@@ -72,10 +73,15 @@ class WhatsAppPydollContext(Context):
         
         if self.browser:
             await self.browser.close()
-            await self.browser.stop()
+            try:await self.browser.stop()
+            except exc.BrowserNotRunning:pass
             await self.kill_browser()
         self.browser = None
         self.tab = None
+        
+        
+
+       
                 
     @classmethod
     async def make_chrome_options(cls):
@@ -110,8 +116,11 @@ class WhatsAppPydollContext(Context):
         options.add_argument("--disable-gpu-watchdog")
         options.add_argument("--disable-dev-shm-usage")
         options.add_argument("--disable-hang-monitor")
+        
+        if is_in_container():
+            options.add_argument('--no-sandbox')
+            options.add_argument('--disable-dev-shm-usage')
 
-        # Disable Tab Discarding and Window Occlusion Features
         disabled_features = [
             "CalculateNativeWinOcclusion",
             "WebContentsDiscard",
@@ -149,7 +158,7 @@ class WhatsAppPydollContext(Context):
                 'timezoneId': self.config['timezone']
             }
         })
-        # 2. Lock the Locale (reinforces the language settings natively)
+        
         await tab._connection_handler.execute_command({
             'method': 'Emulation.setLocaleOverride',
             'params': {

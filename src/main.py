@@ -1,13 +1,15 @@
 import asyncio
 import logging
+from pathlib import Path
 
 from dotenv import load_dotenv
 
-load_dotenv()
+from src.mcp_whatsapp.utils.funcs import is_in_container
+
+assert load_dotenv(override=True, dotenv_path=Path(".env") if not is_in_container() else Path(".env.docker"))
 
 import json
 from contextlib import asynccontextmanager
-from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware

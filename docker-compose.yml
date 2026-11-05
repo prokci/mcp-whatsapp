@@ -1,0 +1,67 @@
+services:
+  mcp-whatsapp-db:
+    image: pgvector/pgvector:pg17
+    container_name: mcp-whatsapp-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:        ${PG_DATABASE}
+      POSTGRES_USER:      ${PG_USERNAME}
+      POSTGRES_PASSWORD:  ${PG_PASSWORD}
+    ports:
+      - ${PG_PORT}:5432
+    volumes:
+      - ./.data/data_base:/var/lib/postgresql/data
+
+  mcp-whatsapp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: mcp-whatsapp:latest
+    container_name: mcp-whatsapp-server
+    restart: unless-stopped
+    
+    env_file:
+      - .env.docker
+    
+    volumes:
+      - ./.data/logs:/app/data/logs
+      - ./.data/chrome-data:${DOCKER_USER_CHROME_DIR}
+      - ./.data/dowland:/app/data/dowland
+      - ${FOLDER_FILES}:/home/files
+    
+    ports:
+      - "${MCP_PORT}:${MCP_PORT}"
+    
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+    
+    shm_size: '2gb'
+    
+    security_opt:
+      - seccomp:unconfined
+    
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "3"
+
+    depends_on:
+      - mcp-whatsapp-db
+
+volumes:
+  prometheus_data:
+    driver: local
+  loki_data:
+    driver: local
+
+networks:
+  default:
+    name: pydoll-network
+    driver: bridge
