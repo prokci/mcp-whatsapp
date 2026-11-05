@@ -39,7 +39,7 @@ class WhatsAppPydollContext(Context):
         self.lock = asyncio.Lock()
         self._watchdog_task: asyncio.Task | None = None
         self._quque = WebAppQueue()
-        self.lang = Language()
+        self.lang = None
         self._chrome_options = None
         
     async def lanch(self, is_lock = True):
@@ -48,10 +48,14 @@ class WhatsAppPydollContext(Context):
             self.browser = Chrome(options = self._chrome_options)
             self.tab = await self.browser.start()
             self.tab = await self.get_new_whatsapp_tab(self.tab)
-            while True:
-                res = await self.tab.find(text=self.lang["load_whatsapp_key_word"], raise_exc = False, timeout=5)
-                if res:
-                    break
+            is_find = False
+            while not is_find:
+                for lang, key_word in Language.get_all_languages("load_whatsapp_key_word"):
+                    res = await self.tab.find(text=key_word, raise_exc = False, timeout=5)
+                    if res:
+                        is_find = True
+                        self.lang = Language(lang = lang)
+                        break
             log.info("WhatsApp Web readyState is complete.")
             
             self._watchdog_task = asyncio.create_task(self._watchdog_loop())
@@ -119,7 +123,6 @@ class WhatsAppPydollContext(Context):
         
         if is_in_container():
             options.add_argument('--no-sandbox')
-            options.add_argument('--disable-dev-shm-usage')
 
         disabled_features = [
             "CalculateNativeWinOcclusion",

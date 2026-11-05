@@ -2,7 +2,6 @@ import os
 from contextlib import asynccontextmanager
 from zoneinfo import ZoneInfo
 
-from dotenv import load_dotenv
 from sqlalchemy import (
     func,
     select,
@@ -10,8 +9,6 @@ from sqlalchemy import (
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
 from sqlalchemy.orm import declarative_base
 
-# from sqlmodel import SQLModel
-from src.mcp_whatsapp.utils.funcs import raise_none
 from src.mcp_whatsapp.utils.patern_classes import Singleton
 
 SQLModel = declarative_base()
@@ -20,7 +17,6 @@ SQLModel = declarative_base()
 class DBContext(Singleton):
     DATABASE_URL = f"postgresql+asyncpg://{os.getenv('PG_USERNAME')}:{os.getenv('PG_PASSWORD')}@{os.getenv('PG_HOST')}:{os.getenv('PG_PORT')}/postgres"
     GO_DATABASE_URL = f"postgres://{os.getenv('PG_USERNAME')}:{os.getenv('PG_PASSWORD')}@{os.getenv('PG_HOST')}:{os.getenv('PG_PORT')}/postgres?sslmode=disable"
-    timezone = ZoneInfo("Europe/Minsk")
     
     engine:AsyncEngine
     
