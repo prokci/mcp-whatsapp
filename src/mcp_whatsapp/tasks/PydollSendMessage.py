@@ -28,7 +28,7 @@ class PydollWalkToChat(WhatsappTask):
             raise_exc=False
         )
         if not search_box:
-            inputs = raise_none(await tab.find(tag_name="input", raise_exc=False, find_all=True))
+            inputs = await tab.find(tag_name="input",  find_all=True)
             inputs = [input for input in inputs if await input.is_visible() and input.attributes.get('data_testid') not in ["conversation-compose-box-input", "media-caption-input-container"]]
             if len(inputs) != 1:
                 raise RuntimeError("Can't find search box")
@@ -129,7 +129,12 @@ class PydollSendFile(WhatsappTask):
         await attach_btn.click(humanize=is_humanize)
         
         async with tab.expect_file_chooser(files=self.file_path):
-            document_btn = await tab.find(text=self.lang["document"], timeout=policy.element_timeout)
+            document_btns = await tab.find(text=self.lang["document"], timeout=policy.element_timeout, find_all = True)
+            document_btns = [input for input in document_btns if await input.is_visible()]
+            if len(document_btns) != 1:
+                raise RuntimeError("Can't find document button.")
+            document_btn = raise_none(document_btns[0])
+            
             await document_btn.click(humanize=is_humanize)
         
         await policy.delay_between_steps()
