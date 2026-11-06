@@ -2,7 +2,7 @@ import asyncio
 import sys
 from pathlib import Path
 
-import pyperclip
+import pyclip
 from pydoll.constants import Key
 
 from src.mcp_whatsapp.tasks.Task import WhatsappTask
@@ -96,11 +96,11 @@ class PydollSendMessage(WhatsappTask):
         await tab.keyboard.hotkey(Key.CONTROL, Key.A)
         await tab.keyboard.press(Key.BACKSPACE)
         
-        old_text = pyperclip.paste()
-        pyperclip.copy(self.message)
+        old_text = pyclip.paste()
+        pyclip.copy(self.message)
         modifier_key = Key.META if sys.platform == 'darwin' else Key.CONTROL
         await tab.keyboard.hotkey(modifier_key, Key.V)
-        pyperclip.copy(old_text)
+        pyclip.copy(old_text)
         
         need_user_confirmation = self.need_user_confirmation \
             if self.need_user_confirmation is not None else policy.need_user_confirmation
@@ -160,8 +160,8 @@ class PydollSendFile(WhatsappTask):
         await tab.keyboard.press(Key.BACKSPACE)
         
         if self.message:
-            old_text = pyperclip.paste()
-            pyperclip.copy(self.message)
+            old_text = pyclip.paste()
+            pyclip.copy(self.message)
             modifier_key = Key.META if sys.platform == 'darwin' else Key.CONTROL
             await tab.keyboard.hotkey(modifier_key, Key.V)
-            pyperclip.copy(old_text)
+            pyclip.copy(old_text)

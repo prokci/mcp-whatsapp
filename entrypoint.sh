@@ -14,5 +14,7 @@ rm -f "$USER_CHROME_DIR/SingletonCookie"
 export DISPLAY=:99
 Xvfb :99 -screen 0 1920x1080x24 & sleep 2
 
+echo "initialized" | xclip -selection clipboard
+
 exec  python -m uvicorn src.main:app --host 0.0.0.0 --port 9831
 # exec tail -f /dev/null
