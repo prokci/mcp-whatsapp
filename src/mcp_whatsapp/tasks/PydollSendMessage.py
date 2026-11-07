@@ -151,29 +151,9 @@ class PydollSendFile(PydollSendMessage):
         
         await policy.delay_between_steps()
         await self.send_messge_if_need(policy)
-        
-        need_user_confirmation = self.need_user_confirmation \
-            if self.need_user_confirmation is not None else policy.need_user_confirmation
-            
-        if not need_user_confirmation:
-            await policy.delay_between_steps()
-            await tab.keyboard.press(Key.ENTER)
             
     async def send_messge_if_need(self, policy: AppPolicy):
-        is_humanize = policy.humanize
         tab = raise_none(self.context.tab)
         
         message_input = await tab.find(data_testid="media-caption-input-container", timeout=policy.element_timeout)
-        await message_input.click(humanize=is_humanize)
-        await policy.delay_between_steps()
-        
-        await tab.keyboard.hotkey(Key.CONTROL, Key.A)
-        await policy.delay_between_steps()
-        await tab.keyboard.press(Key.BACKSPACE)
-        
-        if self.message:
-            old_text = pyclip.paste()
-            pyclip.copy(self.message)
-            modifier_key = Key.META if sys.platform == 'darwin' else Key.CONTROL
-            await tab.keyboard.hotkey(modifier_key, Key.V)
-            pyclip.copy(old_text)
+        await self.insert_input(message_input, policy)

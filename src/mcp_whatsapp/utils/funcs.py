@@ -2,8 +2,10 @@
 import json
 import operator
 import os
+import random
+from asyncio import sleep
 from collections import deque
-from collections.abc import Callable, Iterable, Mapping, Sequence
+from collections.abc import Callable, Coroutine, Iterable, Mapping, Sequence
 from collections.abc import Set as AbstractSet
 from dataclasses import asdict, is_dataclass
 from datetime import date, datetime, time
@@ -14,6 +16,8 @@ from itertools import groupby, zip_longest
 from pathlib import Path
 from typing import Any, TypeVar
 from uuid import UUID
+
+from tqdm import tqdm
 
 T = TypeVar('T')
 def first(the_iterable:Iterable[T], condition = lambda x: True)->T|None:
@@ -281,3 +285,21 @@ def to_jsonable(obj):
 
 def is_in_container():
     return os.path.exists('/.dockerenv')
+
+
+class ProgressiveTryError(Exception):
+    pass
+
+
+async def progresive_try(func: Callable[[], Coroutine[None, None, T]], n_tries, max_s = 60, base = 4,  error_type = Exception):
+    error = None
+    for i in range(n_tries):
+        try:
+            return await func()
+        except error_type as e:
+            s = abs(min(base**(i+1), max_s) + random.normalvariate(0, base))
+            tqdm.write(f"[progresive_try] Error: {e}. Retrying...({s}s)")
+            error = e
+            await sleep(s)
+    
+    raise ProgressiveTryError(f"[progresive_try] Failed {n_tries} times.") from error

@@ -8,6 +8,7 @@ from sqlalchemy import (
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
 from sqlalchemy.orm import declarative_base
 
+from src.mcp_whatsapp.utils.funcs import progresive_try
 from src.mcp_whatsapp.utils.patern_classes import Singleton
 
 SQLModel = declarative_base()
@@ -24,8 +25,11 @@ class DBContext(Singleton):
         self.current_db_version = 1
         
     async def launch(self):
-        async with self.engine.begin() as conn:
-            await conn.run_sync(SQLModel.metadata.create_all)
+        async def sunc_database():
+            async with self.engine.begin() as conn:
+                await conn.run_sync(SQLModel.metadata.create_all)
+                
+        await progresive_try(sunc_database, 5)
         await self.set_current_db_version()
                 
     @asynccontextmanager

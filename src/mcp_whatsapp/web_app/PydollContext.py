@@ -55,8 +55,9 @@ class WhatsAppPydollContext(Context):
                     if res:
                         is_find = True
                         self.lang = Language(lang = lang)
+                        log.info(f"WhatsApp Web readyState is complete in {lang} mode.")
                         break
-            log.info("WhatsApp Web readyState is complete.")
+            
             
             self._watchdog_task = asyncio.create_task(self._watchdog_loop())
             
@@ -123,6 +124,8 @@ class WhatsAppPydollContext(Context):
         
         if is_in_container():
             options.add_argument('--no-sandbox')
+            options.add_argument("--disable-gpu")
+            options.add_argument("--window-size=1920,1080")
 
         disabled_features = [
             "CalculateNativeWinOcclusion",
