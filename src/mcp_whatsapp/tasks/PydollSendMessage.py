@@ -1,4 +1,5 @@
 import asyncio
+import subprocess
 import sys
 from pathlib import Path
 
@@ -91,31 +92,42 @@ class PydollSendMessage(WhatsappTask):
             data_testid="conversation-compose-box-input", 
             timeout=policy.element_timeout
         )
-        await compose_box.click(humanize=is_humanize)
+        
+        await self.insert_input(compose_box, policy)
+            
+    async def insert_input(self, message_input, policy, ):
+        is_humanize = policy.humanize
+        tab = raise_none(self.context.tab)
+        
+        await message_input.click(humanize=is_humanize)
+        await policy.delay_between_steps()
         
         await tab.keyboard.hotkey(Key.CONTROL, Key.A)
+        await policy.delay_between_steps()
         await tab.keyboard.press(Key.BACKSPACE)
         
-        old_text = pyclip.paste()
-        pyclip.copy(self.message)
-        modifier_key = Key.META if sys.platform == 'darwin' else Key.CONTROL
-        await tab.keyboard.hotkey(modifier_key, Key.V)
-        pyclip.copy(old_text)
-        
+        if self.message:
+            try:
+                old_text = pyclip.paste()
+            except subprocess.CalledProcessError:
+                old_text = ""
+            pyclip.copy(self.message)
+            modifier_key = Key.META if sys.platform == 'darwin' else Key.CONTROL
+            await tab.keyboard.hotkey(modifier_key, Key.V)
+            pyclip.copy(old_text)
+            
         need_user_confirmation = self.need_user_confirmation \
             if self.need_user_confirmation is not None else policy.need_user_confirmation
             
         if not need_user_confirmation:
+            await policy.delay_between_steps()
             await tab.keyboard.press(Key.ENTER)
     
-class PydollSendFile(WhatsappTask):
+class PydollSendFile(PydollSendMessage):
     def __init__(self, file_path: Path, number: str, message: str="", need_user_confirmation: bool|None = None):
-        self.to_chat = PydollWalkToChat(number)
+        super().__init__(message, number, need_user_confirmation)
         self.file_path = file_path
         assert self.file_path.exists(), f"File doesn't exist: {self.file_path}"
-        self.context = WhatsAppPydollContext()
-        self.need_user_confirmation = need_user_confirmation
-        self.message = message
         self.lang = Language()
         
     async def execute(self, policy: AppPolicy):

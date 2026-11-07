@@ -1,6 +1,5 @@
 import os
 from contextlib import asynccontextmanager
-from zoneinfo import ZoneInfo
 
 from sqlalchemy import (
     func,

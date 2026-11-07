@@ -15,5 +15,6 @@ class WhatsappTask(Task):
     @abc.abstractmethod
     async def execute(self, policy: AppPolicy):...
     
+    
 class UpdateSupplierForWhatsapp(WhatsappTask):...
 
