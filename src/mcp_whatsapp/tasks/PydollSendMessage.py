@@ -82,7 +82,6 @@ class PydollSendMessage(WhatsappTask):
         self.need_user_confirmation = need_user_confirmation
     
     async def execute(self, policy: AppPolicy):
-        is_humanize = policy.humanize
         tab = raise_none(self.context.tab)
         
         await self.to_chat.execute(policy)

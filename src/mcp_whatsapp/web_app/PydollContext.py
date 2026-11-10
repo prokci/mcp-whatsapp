@@ -179,14 +179,17 @@ class WhatsAppPydollContext(Context):
         return tab
     
     async def _watchdog_loop(self):
-        while True:
-            await asyncio.sleep(self.ping_interval)
-            is_alive = await self.assert_alive()
-            if not is_alive:
-                await self.close()
-                await self.lanch()
-                self._quque.start()
-                return
+        try:
+            while True:
+                await asyncio.sleep(self.ping_interval)
+                is_alive = await self.assert_alive()
+                if not is_alive:
+                    await self.close()
+                    await self.lanch()
+                    self._quque.start()
+                    return
+        except asyncio.CancelledError:
+            log.info("Watchdog loop canceled.")
 
     async def assert_alive(self):
         if not self.tab:

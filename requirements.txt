@@ -10,3 +10,5 @@ tzdata
 asyncpg
 psutil
 pyclip
+pytest
+pytest-asyncio
