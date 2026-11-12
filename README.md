@@ -6,7 +6,7 @@
 [![Neonize](https://img.shields.io/badge/WhatsApp-Neonize%20%2F%20Whatsmeow-25D366.svg?logo=whatsapp)](https://github.com/krypton-byte/neonize)
 [![PostgreSQL](https://img.shields.io/badge/Storage-pgvector%20%2F%20Postgres-4169E1.svg?logo=postgresql)](https://www.postgresql.org)
 
-An MCP (Model Context Protocol) server and FastAPI service that bridges AI workflow engines (such as n8n, Claude Desktop, and Cursor) with WhatsApp. 
+An MCP (Model Context Protocol) server and FastAPI service that bridges AI workflow engines with WhatsApp. 
 
 It implements a **dual-engine architecture**:
 1. **Inbound & Sync Engine (Neonize / whatsmeow)**: High-speed binary protocol hook for real-time message listening, file downloads, history synchronization, and contact/LID resolution backed by PostgreSQL.
@@ -16,7 +16,6 @@ It implements a **dual-engine architecture**:
 
 ## Table of Contents
 
-- [Architecture Overview](#architecture-overview)
 - [Key Features](#key-features)
 - [Project Structure](#project-structure)
 - [Prerequisites](#prerequisites)
@@ -33,49 +32,7 @@ It implements a **dual-engine architecture**:
 - [Client Integration](#client-integration)
   - [n8n Workflow Setup](#n8n-workflow-setup)
   - [Claude Desktop / Cursor Configuration](#claude-desktop--cursor-configuration)
-- [Alternative Solutions](#alternative-solutions)
 - [Testing](#testing)
-
----
-
-## Architecture Overview
-
-```
-                      +---------------------------------------+
-                      |       MCP Client (n8n / Claude)       |
-                      +---------------------------------------+
-                                  |                 ^
-             Tools (JSON-RPC/POST)|                 | SSE Event Stream
-                                  v                 |
-                    +-------------------------------------+
-                    |       FastAPI / MCP Gateway         |
-                    |             (Port 9831)             |
-                    +-------------------------------------+
-                               |               ^
-                 Execute Task  |               | Live Inbound Events
-                               v               |
-             +-----------------------+   +----------------------+
-             |      WebAppQueue      |   |  MessageBroadcaster  |
-             +-----------------------+   +----------------------+
-                         |                          ^
-                         v                          | Event Listeners
-             +-----------------------+   +----------------------+
-             |  Pydoll Chrome Engine |   | Neonize Core Engine  |
-             |   (Outbound Actions)  |   |   (whatsmeow sync)   |
-             +-----------------------+   +----------------------+
-                         |                          |
-                         | WhatsApp Web UI          | Binary Protocol
-                         v                          v
-             +--------------------------------------------------+
-             |                 WhatsApp Network                 |
-             +--------------------------------------------------+
-                                        |
-                                        v
-                            +-----------------------+
-                            |  PostgreSQL Database  |
-                            | (Chat History & Maps) |
-                            +-----------------------+
-```
 
 ---
 
